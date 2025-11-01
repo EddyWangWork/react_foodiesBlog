@@ -168,6 +168,79 @@ export function seedIfEmpty() {
     const f5 = addFood({ name: 'Bun Cha', kind: 'noodle', shopId: s1.id, price: '50000', rating: 5, favorite: false })
     const f6 = addFood({ name: 'Goi Cuon', kind: 'snack', shopId: s2.id, price: '30000', rating: 4, favorite: true })
 
+    // Sample trips from 2024 for testing year/month filters
+    addTrip({
+        date: '2024-03-15',
+        title: 'Spring Streets of Hanoi 2024',
+        description: 'A crisp spring day exploring Hanoi street food. Highlights: Pho and local coffee stops.',
+        placeIds: [p1.id],
+        shopIds: [s1.id, s4.id],
+        foodIds: [f1.id, f4.id],
+        photos: [],
+        rating: 5,
+        tags: ['2024', 'hanoi', 'spring'],
+        budget: 120000,
+        timeline: [
+            { time: '08:00', title: 'Pho Breakfast', note: 'Start at Pho 24', shopId: s1.id, foodId: f1.id, placeId: p1.id },
+        ],
+        activities: [
+            { title: 'Market stroll', note: '' }
+        ],
+        expenses: [
+            { label: 'Pho', amount: 45000, category: 'Food', relatedType: 'food', relatedId: f1.id },
+            { label: 'Coffee', amount: 20000, category: 'Drink', relatedType: 'food', relatedId: f4.id }
+        ],
+    })
+
+    addTrip({
+        date: '2024-07-10',
+        title: 'Summer Saigon Bites 2024',
+        description: 'Hot summer evening with riverside snacks and drinks.',
+        placeIds: [p2.id],
+        shopIds: [s2.id],
+        foodIds: [f2.id, f6.id],
+        photos: [],
+        rating: 4,
+        tags: ['2024', 'saigon', 'summer'],
+        budget: 90000,
+        timeline: [
+            { time: '18:30', title: 'Riverside Dinner', note: 'Com Tam and spring rolls', shopId: s2.id, foodId: f2.id, placeId: p2.id }
+        ],
+        activities: [{ title: 'Sunset walk', note: '' }],
+        expenses: [{ label: 'Dinner', amount: 55000, category: 'Food', relatedType: 'food', relatedId: f2.id }],
+    })
+
+    // 2024 main trip with two entries
+    const main2024 = addTrip({
+        date: '2024-05-01',
+        title: 'Vietnam Highlights 2024',
+        description: 'Collection of short journal entries from 2024 travels.',
+        tags: ['2024', 'vietnam'],
+        budget: 500000,
+    })
+    addTrip({
+        date: '2024-05-02',
+        title: 'Hanoi Day Out',
+        description: 'Focused on street eats in the Old Quarter.',
+        parentId: main2024.id,
+        placeIds: [p1.id],
+        shopIds: [s1.id],
+        foodIds: [f1.id],
+        expenses: [{ label: 'Pho & Snacks', amount: 70000, category: 'Food' }],
+        tags: ['hanoi']
+    })
+    addTrip({
+        date: '2024-05-03',
+        title: 'Saigon Evening Stroll',
+        description: 'Tried local favorites by the river.',
+        parentId: main2024.id,
+        placeIds: [p2.id],
+        shopIds: [s2.id],
+        foodIds: [f2.id, f6.id],
+        expenses: [{ label: 'Street Dinner', amount: 85000, category: 'Food' }],
+        tags: ['saigon']
+    })
+
     // Trips
     addTrip({
         date: '2025-10-15',

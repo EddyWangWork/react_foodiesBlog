@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { listTrips, addTrip, updateTrip, deleteTrip, listPlaces, listShops, listFoods, seedIfEmpty } from '../storage/db.js'
 import Modal from '../components/Modal.jsx'
 import Rating from '../components/Rating.jsx'
@@ -18,6 +18,14 @@ export default function TripJournal() {
     const [tagFilter, setTagFilter] = useState('')
     const [hierarchy, setHierarchy] = useState(true)
     const [showParentsOnly, setShowParentsOnly] = useState(false)
+    const [yearFilter, setYearFilter] = useState('')
+    const [monthFilter, setMonthFilter] = useState('')
+    const [showRollup, setShowRollup] = useState(() => {
+        try {
+            const v = localStorage.getItem('trip:rollup:visible')
+            return v === null ? true : v === 'true'
+        } catch { return true }
+    })
     const [modalOpen, setModalOpen] = useState(false)
     const [editingId, setEditingId] = useState(null)
     const [form, setForm] = useState({
@@ -70,15 +78,27 @@ export default function TripJournal() {
             )
         })
         const byTag = tagFilter ? base.filter(t => (t.tags || []).includes(tagFilter)) : base
-        byTag.sort((a, b) => {
+        // apply year/month filters
+        const byDate = byTag.filter(t => {
+            if (!yearFilter && !monthFilter) return true
+            const d = t.date || ''
+            if (!d) return false
+            // date expected in YYYY-MM-DD format; safely fall back to Date parsing
+            const y = d.slice(0, 4)
+            const m = d.slice(5, 7)
+            if (yearFilter && y !== yearFilter) return false
+            if (monthFilter && m !== monthFilter) return false
+            return true
+        })
+        byDate.sort((a, b) => {
             const dir = sortAsc ? 1 : -1
             if (sortKey === 'date') return dir * (a.date || '').localeCompare(b.date || '')
             if (sortKey === 'title') return dir * (a.title || '').localeCompare(b.title || '')
             if (sortKey === 'rating') return dir * ((a.rating || 0) - (b.rating || 0))
             return 0
         })
-        return byTag
-    }, [trips, search, sortKey, sortAsc, tagFilter])
+        return byDate
+    }, [trips, search, sortKey, sortAsc, tagFilter, yearFilter, monthFilter])
 
     function openAdd() {
         setEditingId(null)
@@ -222,6 +242,20 @@ export default function TripJournal() {
                     <option value="">Filter: All tags</option>
                     {allTags.map(tag => (<option key={tag} value={tag}>Tag: {tag}</option>))}
                 </select>
+                <select className="input w-40" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+                    <option value="">Year: All</option>
+                    {Array.from(new Set(trips.map(t => (t.date || '').slice(0, 4)).filter(Boolean))).sort((a, b) => b - a).map(y => (
+                        <option key={y} value={y}>{y}</option>
+                    ))}
+                </select>
+                <select className="input w-32" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
+                    <option value="">Month: All</option>
+                    {[['01', 'Jan'], ['02', 'Feb'], ['03', 'Mar'], ['04', 'Apr'], ['05', 'May'], ['06', 'Jun'], ['07', 'Jul'], ['08', 'Aug'], ['09', 'Sep'], ['10', 'Oct'], ['11', 'Nov'], ['12', 'Dec']].map(([val, label]) => (
+                        <option key={val} value={val}>{label}</option>
+                    ))}
+                </select>
+                <button className="btn" onClick={() => { setYearFilter(''); setMonthFilter('') }} title="Clear date filters">Clear date</button>
+                <button className="btn" onClick={() => { const next = !showRollup; setShowRollup(next); try { localStorage.setItem('trip:rollup:visible', String(next)) } catch { } }} title="Toggle main trips roll-up">{showRollup ? 'Hide Roll-up' : 'Show Roll-up'}</button>
                 <select className="input w-48" value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
                     <option value="date">Sort: Date</option>
                     <option value="title">Sort: Title</option>
@@ -248,8 +282,12 @@ export default function TripJournal() {
                 <TagDistribution trips={filtered} />
             </div>
 
-            {/* Parent trips roll-up overview */}
-            <ParentsRollup trips={filtered} allTrips={trips} />
+            {/* Parent trips roll-up overview (toggleable/compact) */}
+            {showRollup ? (
+                <ParentsRollup trips={filtered} allTrips={trips} onCollapse={() => setShowRollup(false)} />
+            ) : (
+                <CompactRollup trips={filtered} allTrips={trips} onExpand={() => setShowRollup(true)} />
+            )}
 
             {filtered.length === 0 ? (
                 <div className="text-center py-16 text-gray-500">
@@ -984,11 +1022,21 @@ function TagDistribution({ trips }) {
     )
 }
 
-function ParentsRollup({ trips, allTrips }) {
+function ParentsRollup({ trips, allTrips, onCollapse }) {
     const parents = allTrips.filter(t => !t.parentId)
     const [sortKey, setSortKey] = useState('combined') // combined|entries|title
     const [respectFilter, setRespectFilter] = useState(true)
     const [showBudget, setShowBudget] = useState(false)
+    // Use class-based transitions (tailwind) instead of inline styles
+    const [expanded, setExpanded] = useState(true)
+    const [mounted, setMounted] = useState(false)
+    const containerRef = useRef(null)
+
+    // trigger mount animation
+    useEffect(() => {
+        requestAnimationFrame(() => setMounted(true))
+        return () => setMounted(false)
+    }, [])
     function monthKey(d) {
         const dt = new Date(d)
         const y = dt.getFullYear()
@@ -1086,12 +1134,36 @@ function ParentsRollup({ trips, allTrips }) {
                     </select>
                     <button className="btn" onClick={() => exportRollupCSV(rows)}>Export CSV</button>
                     <button className="btn" onClick={() => window.print()}>Print</button>
+                    {onCollapse && (
+                        <button
+                            className="btn-sm btn-secondary p-2"
+                            onClick={() => {
+                                // toggle expanded -> collapse via class transitions
+                                if (!expanded) return
+                                setExpanded(false)
+                            }}
+                            title="Collapse roll-up"
+                        >
+                            <svg className="w-4 h-4 transform rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
             </div>
             {rows.length === 0 ? (
                 <p className="text-sm text-gray-500">No main trips.</p>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div
+                    ref={containerRef}
+                    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 transition-[max-height,opacity] duration-300 ease overflow-hidden ${mounted && expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}
+                    onTransitionEnd={(e) => {
+                        // when collapse transition completes, notify parent to swap to compact view
+                        if (e.propertyName && e.propertyName.includes('max-height') && !expanded) {
+                            try { onCollapse && onCollapse() } catch { }
+                        }
+                    }}
+                >
                     {rows.map((r) => {
                         const cats = Object.entries(r.categories).sort((a, b) => b[1] - a[1])
                         const total = Math.max(1, r.combinedTotal)
@@ -1147,6 +1219,96 @@ function ParentsRollup({ trips, allTrips }) {
                     })}
                 </div>
             )}
+        </div>
+    )
+}
+
+function CompactRollup({ trips, allTrips, onExpand }) {
+    // Compute parent ids that are relevant given the current filtered trips
+    const filteredIds = new Set((trips || []).map(t => t.id))
+    const parentIdSet = new Set()
+        ; (trips || []).forEach(t => {
+            if (t.parentId) parentIdSet.add(t.parentId)
+            else parentIdSet.add(t.id)
+        })
+
+    const parents = Array.from(parentIdSet).map(pid => allTrips.find(p => p.id === pid)).filter(Boolean)
+
+    const parentSummaries = parents.map(p => {
+        const parentInFiltered = filteredIds.has(p.id)
+        const parentExpense = parentInFiltered ? (p.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0) : 0
+        const children = allTrips.filter(c => c.parentId === p.id && filteredIds.has(c.id))
+        const childrenExpense = children.reduce((sum, ch) => sum + (ch.expenses || []).reduce((s, e) => s + (Number(e.amount) || 0), 0), 0)
+        const combinedTotal = parentExpense + childrenExpense
+        return { id: p.id, title: p.title, combinedTotal, entries: children.length }
+    })
+
+    const totalParents = parentSummaries.length
+    const totalEntries = parentSummaries.reduce((s, p) => s + p.entries, 0)
+    const totalSpend = parentSummaries.reduce((s, p) => s + p.combinedTotal, 0)
+
+    // Sparkline: entries over last 6 months (based on filtered trips)
+    const now = new Date()
+    const months = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })
+    const countsByMonth = months.map(() => 0)
+        ; (trips || []).forEach(t => {
+            const d = t.date || ''
+            if (!d) return
+            const key = `${d.slice(0, 4)}-${d.slice(5, 7)}`
+            const idx = months.indexOf(key)
+            if (idx >= 0) countsByMonth[idx]++
+        })
+
+    // Top categories from filtered trips' expenses
+    const catMap = {}
+        ; (trips || []).forEach(t => {
+            ; (t.expenses || []).forEach(e => {
+                const k = e.category || 'Other'
+                catMap[k] = (catMap[k] || 0) + (Number(e.amount) || 0)
+            })
+        })
+    const topCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 3)
+
+    return (
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={onExpand}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onExpand() }}
+            className="bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:shadow-md"
+        >
+            <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Main Trips Roll-up</div>
+                <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{totalParents} main • {totalEntries} entries</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Combined spend: <span className="font-medium">{formatPrice(totalSpend)}</span></div>
+                <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-end gap-1 h-6">
+                        {countsByMonth.map((c, i) => {
+                            const max = Math.max(1, ...countsByMonth)
+                            const h = Math.max(4, Math.round((c / max) * 100))
+                            return <div key={i} className="w-2 bg-emerald-500/80 rounded" style={{ height: `${h}%` }} title={`${months[i]}: ${c}`} />
+                        })}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Last 6 months</div>
+                </div>
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="flex flex-col text-right">
+                    {topCats.length === 0 ? (
+                        <div className="text-xs text-gray-500">No expense categories</div>
+                    ) : (
+                        topCats.map(([k, v], idx) => (
+                            <div key={k} className="text-xs text-gray-700 dark:text-gray-200">
+                                <span className="inline-block w-2 h-2 rounded mr-2" style={{ backgroundColor: ['#6366F1', '#06B6D4', '#10B981'][idx % 3] }} />{k}: {formatPrice(v)}
+                            </div>
+                        ))
+                    )}
+                </div>
+                <button className="btn">Expand</button>
+            </div>
         </div>
     )
 }

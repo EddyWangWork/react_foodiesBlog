@@ -199,10 +199,33 @@ function NavBar() {
 }
 
 export default function App() {
+  // ScrollToTop: ensure page scrolls to top on navigation changes.
+  // Updated behavior:
+  // - only trigger on pathname changes (ignore search params)
+  // - use smooth scrolling for nicer UX
+  // - add a short delay to allow lazy-loaded content to render before scrolling
+  function ScrollToTop() {
+    const location = useLocation()
+    useEffect(() => {
+      // Only act on pathname changes to avoid jumping when query/search changes.
+      // Add a tiny delay so content has a chance to render (useful for lazy sections).
+      const timer = setTimeout(() => {
+        try {
+          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+        } catch (e) {
+          // Fallback for older browsers
+          window.scrollTo(0, 0)
+        }
+      }, 80)
+      return () => clearTimeout(timer)
+    }, [location.pathname])
+    return null
+  }
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 dark:text-gray-200">
       <NavBar />
       <main className="max-w-7xl mx-auto p-6 flex-1 w-full">
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/places" element={<Places />} />
