@@ -1,0 +1,27 @@
+.table {
+    @apply min-w-full bg-white border rounded overflow-hidden;
+}
+
+.table th {
+    @apply text-left bg-gray-50 border-b px-3 py-2 text-sm font-medium text-gray-600;
+}
+
+.table td {
+    @apply border-b px-3 py-2 align-top;
+}
+
+.btn {
+    @apply inline-flex items-center gap-1 rounded border px-3 py-1 text-sm hover:bg-gray-100;
+}
+
+.btn-primary {
+    @apply inline-flex items-center gap-1 rounded bg-indigo-600 text-white px-3 py-1 text-sm hover:bg-indigo-700;
+}
+
+.btn-danger {
+    @apply inline-flex items-center gap-1 rounded bg-red-600 text-white px-3 py-1 text-sm hover:bg-red-700;
+}
+
+.input {
+    @apply w-full rounded border px-3 py-2 text-sm;
+}

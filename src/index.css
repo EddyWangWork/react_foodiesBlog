@@ -1,0 +1,45 @@
+@import './styles/ui.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App baseline styles (lean; rely on Tailwind utilities) */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+/* Text color handled via Tailwind classes; avoid opinionated defaults here */
+
+/* Print styles */
+@media print {
+
+  nav,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+}

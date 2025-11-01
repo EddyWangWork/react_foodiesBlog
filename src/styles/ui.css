@@ -1,0 +1,83 @@
+@layer components {
+    .table {
+        @apply min-w-full;
+    }
+
+    .table th {
+        @apply text-left bg-gray-50 border-b px-4 py-3 text-sm font-semibold text-gray-700;
+    }
+
+    .table td {
+        @apply border-b px-4 py-3;
+    }
+
+    .btn {
+        @apply inline-flex items-center gap-1 rounded border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 transition-colors;
+    }
+
+    .btn-sm {
+        @apply inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-50 transition-colors;
+    }
+
+    .btn-primary {
+        @apply inline-flex items-center gap-1 rounded bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-700 shadow-sm transition-all;
+    }
+
+    .btn-danger {
+        @apply inline-flex items-center gap-1 rounded bg-red-600 text-white px-3 py-2 text-sm font-medium hover:bg-red-700 transition-colors;
+    }
+
+    .btn-danger-sm {
+        @apply inline-flex items-center gap-1 rounded bg-red-600 text-white px-2 py-1 text-xs font-medium hover:bg-red-700 transition-colors;
+    }
+
+    .input {
+        @apply w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+}
+
+.animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+}
